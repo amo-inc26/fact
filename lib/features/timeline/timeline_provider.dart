@@ -1,8 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../core/audio/audio_player_provider.dart';
 import '../../data/models/song_model.dart';
-import '../../data/services/apple_music_service.dart';
+import '../post/post_provider.dart';
 
 part 'timeline_provider.g.dart';
 
@@ -10,18 +9,21 @@ part 'timeline_provider.g.dart';
 class TimelineController extends _$TimelineController {
   @override
   FutureOr<List<SongModel>> build() async {
-    final songs = await ref.read(appleMusicServiceProvider.notifier).fetchTopCharts();
+    // PostController から全ユーザーの投稿を取得
+    final posts = await ref.watch(postControllerProvider.future);
     
-    // Play first song
-    if (songs.isNotEmpty) {
-      _playSong(songs.first);
-    }
-    
-    return songs;
-  }
-
-  void _playSong(SongModel song) {
-    ref.read(audioPlayerControllerProvider.notifier).playUrl(song.previewUrl);
+    return posts.map((post) => SongModel(
+      id: post.id,
+      name: post.trackName,
+      artistName: post.artistName,
+      albumName: '',
+      artworkUrl: post.artworkUrl ?? '',
+      previewUrl: post.previewUrl ?? '',
+      genres: post.genre != null ? [post.genre!] : [],
+      username: post.username,
+      comment: post.comment,
+      resonanceCount: post.resonanceCount,
+    )).toList();
   }
 
   Future<void> handleSwipe(int index, String direction) async {
@@ -32,31 +34,24 @@ class TimelineController extends _$TimelineController {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
 
-    // Scoring Logic
-    int scoreDelta = 0;
+    // スコアリング (右:+1.0, 上:+0.5, 左:-1.0)
+    double scoreDelta = 0;
     if (direction == 'right') {
-      scoreDelta = 5;
+      scoreDelta = 1.0;
       await _saveLikedSong(user.id, song);
     } else if (direction == 'up') {
-      scoreDelta = 10;
+      scoreDelta = 0.5;
     } else if (direction == 'left') {
-      scoreDelta = -2;
+      scoreDelta = -1.0;
     }
 
-    // Update Genre Preferences in Supabase
+    // ジャンルの嗜好スコアを更新
     for (final genre in song.genres) {
       await _updateGenreScore(user.id, genre, scoreDelta);
     }
-
-    // Play next song
-    if (index + 1 < songs.length) {
-      _playSong(songs[index + 1]);
-    } else {
-      ref.read(audioPlayerControllerProvider.notifier).stop();
-    }
   }
 
-  Future<void> _updateGenreScore(String userId, String genre, int delta) async {
+  Future<void> _updateGenreScore(String userId, String genre, double delta) async {
     final supabase = Supabase.instance.client;
     
     final existing = await supabase
@@ -70,11 +65,12 @@ class TimelineController extends _$TimelineController {
       await supabase.from('user_genre_preferences').insert({
         'user_id': userId,
         'genre': genre,
-        'preference_score': 5 + delta,
+        'preference_score': 1.0 + delta,
       });
     } else {
+      final currentScore = (existing['preference_score'] as num).toDouble();
       await supabase.from('user_genre_preferences').update({
-        'preference_score': (existing['preference_score'] as int) + delta,
+        'preference_score': currentScore + delta,
       }).eq('id', existing['id']);
     }
   }

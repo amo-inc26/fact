@@ -3,9 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../core/audio/audio_player_provider.dart';
-import '../../data/models/song_model.dart';
 import '../../core/theme/background_provider.dart';
-import '../post/post_provider.dart';
+import 'timeline_provider.dart';
 import 'widgets/music_card.dart';
 import 'widgets/resonance_animation.dart';
 
@@ -30,58 +29,62 @@ class _TimelineScreenState extends State<TimelineScreen> {
   Widget build(BuildContext context) {
     return Consumer(
       builder: (context, ref, child) {
-        final postsAsync = ref.watch(postControllerProvider);
+        final timelineAsync = ref.watch(timelineControllerProvider);
 
         return Scaffold(
           backgroundColor: Colors.transparent,
           body: Stack(
             children: [
-              postsAsync.when(
-                data: (posts) {
-                  if (posts.isEmpty) {
+              timelineAsync.when(
+                data: (songs) {
+                  if (songs.isEmpty) {
                     return const Center(child: Text('まだ投稿がありません'));
                   }
 
                   return CardSwiper(
-                    cardsCount: posts.length,
+                    cardsCount: songs.length,
+                    allowedSwipeDirection: const AllowedSwipeDirection.only(
+                      left: true,
+                      right: true,
+                      up: true,
+                    ),
                     cardBuilder: (context, index, horizontalThresholdPercentage, verticalThresholdPercentage) {
-                      final post = posts[index];
-                      final song = SongModel(
-                        id: post.id,
-                        name: post.trackName,
-                        artistName: post.artistName,
-                        albumName: '',
-                        artworkUrl: post.artworkUrl ?? '',
-                        previewUrl: post.previewUrl ?? '',
-                        genres: post.genre != null ? [post.genre!] : [],
-                      );
+                      final song = songs[index];
                       
                       if (index == 0) {
-                         ref.read(audioPlayerControllerProvider.notifier).playUrl(song.previewUrl);
-                         // Update background
-                         Future.microtask(() => ref.read(backgroundImageProvider.notifier).update(song.artworkUrl));
+                         Future.microtask(() {
+                           ref.read(audioPlayerControllerProvider.notifier).playUrl(song.previewUrl);
+                           ref.read(backgroundImageProvider.notifier).update(song.artworkUrl);
+                         });
                       }
 
                       return MusicCard(
                         song: song,
-                        username: post.username,
-                        comment: post.comment,
-                        resonanceCount: post.resonanceCount,
+                        username: song.username,
+                        comment: song.comment,
+                        resonanceCount: song.resonanceCount,
                       );
                     },
                     onSwipe: (previousIndex, currentIndex, direction) {
-                      if (direction == CardSwiperDirection.right || direction == CardSwiperDirection.top) {
+                      String swipeDir = '';
+                      if (direction == CardSwiperDirection.right) {
+                        swipeDir = 'right';
                         _triggerResonance();
                         HapticFeedback.mediumImpact();
-                      } else {
+                      } else if (direction == CardSwiperDirection.top) {
+                        swipeDir = 'up';
+                        HapticFeedback.mediumImpact();
+                      } else if (direction == CardSwiperDirection.left) {
+                        swipeDir = 'left';
                         HapticFeedback.lightImpact();
                       }
 
-                      if (currentIndex != null && currentIndex < posts.length) {
-                        final nextPost = posts[currentIndex];
-                        ref.read(audioPlayerControllerProvider.notifier).playUrl(nextPost.previewUrl ?? '');
-                        // Update background
-                        ref.read(backgroundImageProvider.notifier).update(nextPost.artworkUrl);
+                      ref.read(timelineControllerProvider.notifier).handleSwipe(previousIndex, swipeDir);
+
+                      if (currentIndex != null && currentIndex < songs.length) {
+                        final nextSong = songs[currentIndex];
+                        ref.read(audioPlayerControllerProvider.notifier).playUrl(nextSong.previewUrl);
+                        ref.read(backgroundImageProvider.notifier).update(nextSong.artworkUrl);
                       } else {
                         ref.read(audioPlayerControllerProvider.notifier).stop();
                       }
