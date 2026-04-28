@@ -10,11 +10,13 @@ class MusicCard extends StatelessWidget {
     required this.song,
     this.username,
     this.comment,
+    this.resonanceCount = 0,
   });
 
   final SongModel song;
   final String? username;
   final String? comment;
+  final int resonanceCount;
 
   @override
   Widget build(BuildContext context) {
@@ -72,15 +74,40 @@ class MusicCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                   ],
-                  Text(
-                    song.name,
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          song.name,
+                          style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (resonanceCount > 0)
+                        GlassContainer(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          borderRadius: 20,
+                          blur: 10,
+                          child: Row(
+                            children: [
+                              const Icon(Icons.favorite, color: AppColors.primary, size: 16),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$resonanceCount',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
                   ),
                   Text(
                     song.artistName,

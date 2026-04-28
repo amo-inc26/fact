@@ -17,6 +17,7 @@ sealed class PostModel with _$PostModel {
     required DateTime createdAt,
     String? username,
     String? avatarUrl,
+    @Default(0) int resonanceCount,
   }) = _PostModel;
 
   factory PostModel.fromJson(Map<String, dynamic> json) => _$PostModelFromJson(json);

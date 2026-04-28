@@ -17,9 +17,20 @@ class PostController extends _$PostController {
         .order('created_at', ascending: false)
         .limit(50);
 
-    return (response as List).map((item) {
+    final List<PostModel> posts = [];
+    for (final item in (response as List)) {
       final profile = item['profiles'];
-      return PostModel(
+      
+      // Fetch resonance count (total likes for this track)
+      final resonanceResponse = await Supabase.instance.client
+          .from('liked_songs')
+          .select('id')
+          .eq('title', item['track_name'])
+          .eq('artist', item['artist_name']);
+
+      final count = (resonanceResponse as List).length;
+
+      posts.add(PostModel(
         id: item['id'],
         userId: item['user_id'],
         trackName: item['track_name'],
@@ -31,8 +42,11 @@ class PostController extends _$PostController {
         createdAt: DateTime.parse(item['created_at']),
         username: profile != null ? profile['username'] : 'Unknown',
         avatarUrl: profile != null ? profile['avatar_url'] : null,
-      );
-    }).toList();
+        resonanceCount: count,
+      ));
+    }
+
+    return posts;
   }
 
   Future<void> createPost({
@@ -54,6 +68,7 @@ class PostController extends _$PostController {
       'preview_url': previewUrl,
       'comment': comment,
       'genre': genre,
+      'track_id': '${trackName}_$artistName',
     });
     
     ref.invalidateSelf();
