@@ -1,29 +1,88 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/models/song_model.dart';
-import '../post/post_provider.dart';
 
 part 'timeline_provider.g.dart';
 
 @riverpod
 class TimelineController extends _$TimelineController {
   @override
-  FutureOr<List<SongModel>> build() async {
-    // PostController から全ユーザーの投稿を取得
-    final posts = await ref.watch(postControllerProvider.future);
+  FutureOr<List<SongModel>> build({
+    bool isFollowing = false,
+    String? genre,
+    String? feeling,
+    String? scene,
+  }) async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
     
-    return posts.map((post) => SongModel(
-      id: post.id,
-      name: post.trackName,
-      artistName: post.artistName,
-      albumName: '',
-      artworkUrl: post.artworkUrl ?? '',
-      previewUrl: post.previewUrl ?? '',
-      genres: post.genre != null ? [post.genre!] : [],
-      username: post.username,
-      comment: post.comment,
-      resonanceCount: post.resonanceCount,
-    )).toList();
+    List<dynamic> postsData = [];
+    
+    if (isFollowing && user != null) {
+      final followingResponse = await supabase
+          .from('follows')
+          .select('following_id')
+          .eq('follower_id', user.id);
+      
+      final followingIds = (followingResponse as List)
+          .map((f) => f['following_id'] as String)
+          .toList();
+
+      if (followingIds.isEmpty) return [];
+
+      final query = supabase
+          .from('posts')
+          .select('*, profiles:user_id (username, avatar_url)')
+          .inFilter('user_id', followingIds);
+      
+      final response = await query.order('created_at', ascending: false).limit(50);
+      postsData = response as List;
+    } else {
+      var query = supabase
+          .from('posts')
+          .select('*, profiles:user_id (username, avatar_url)');
+      
+      if (genre != null) {
+        query = query.eq('genre', genre);
+      } else if (feeling != null) {
+        query = query.eq('feeling', feeling);
+      } else if (scene != null) {
+        query = query.eq('scene', scene);
+      }
+      
+      final response = await query.order('created_at', ascending: false).limit(50);
+      postsData = response as List;
+    }
+    
+    return await _mapPostsToSongs(postsData);
+  }
+
+  Future<List<SongModel>> _mapPostsToSongs(List<dynamic> items) async {
+    final List<SongModel> songs = [];
+    for (final item in items) {
+      final profile = item['profiles'];
+      
+      final resonanceResponse = await Supabase.instance.client
+          .from('liked_songs')
+          .select('id')
+          .eq('title', item['track_name'])
+          .eq('artist', item['artist_name']);
+      
+      songs.add(SongModel(
+        id: item['id'],
+        name: item['track_name'],
+        artistName: item['artist_name'],
+        albumName: '',
+        artworkUrl: item['artwork_url'] ?? '',
+        previewUrl: item['preview_url'] ?? '',
+        genres: item['genre'] != null ? [item['genre']] : [],
+        userId: item['user_id'],
+        username: profile != null ? profile['username'] : 'Unknown',
+        comment: item['comment'],
+        resonanceCount: (resonanceResponse as List).length,
+      ));
+    }
+    return songs;
   }
 
   Future<void> handleSwipe(int index, String direction) async {
@@ -34,7 +93,6 @@ class TimelineController extends _$TimelineController {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
 
-    // スコアリング (右:+1.0, 上:+0.5, 左:-1.0)
     double scoreDelta = 0;
     if (direction == 'right') {
       scoreDelta = 1.0;
@@ -45,7 +103,6 @@ class TimelineController extends _$TimelineController {
       scoreDelta = -1.0;
     }
 
-    // ジャンルの嗜好スコアを更新
     for (final genre in song.genres) {
       await _updateGenreScore(user.id, genre, scoreDelta);
     }
@@ -53,7 +110,6 @@ class TimelineController extends _$TimelineController {
 
   Future<void> _updateGenreScore(String userId, String genre, double delta) async {
     final supabase = Supabase.instance.client;
-    
     final existing = await supabase
         .from('user_genre_preferences')
         .select()
