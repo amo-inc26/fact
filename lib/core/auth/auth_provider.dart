@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:crypto/crypto.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:google_sign_in/google_sign_in.dart' as gsis;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/foundation.dart';
 
 part 'auth_provider.g.dart';
 
@@ -25,23 +27,26 @@ class AuthController extends _$AuthController {
 
   Future<void> signInWithGoogle() async {
     try {
-      final googleSignIn = GoogleSignIn.instance;
+      final googleSignIn = gsis.GoogleSignIn.instance;
       
-      // Google SignIn v7.x uses authenticate() which returns GoogleSignInAccount.
-      // authentication is now a property, not a Future.
+      await googleSignIn.initialize(
+        clientId: dotenv.env['GOOGLE_IOS_CLIENT_ID'],
+        serverClientId: dotenv.env['GOOGLE_WEB_CLIENT_ID'],
+      );
+      
       final googleUser = await googleSignIn.authenticate();
-
+      
       final googleAuth = googleUser.authentication;
       final idToken = googleAuth.idToken;
 
       if (idToken == null) throw 'No ID Token found.';
 
-      // Sign in to Supabase with ID Token (Google)
       await Supabase.instance.client.auth.signInWithIdToken(
         provider: OAuthProvider.google,
         idToken: idToken,
       );
     } catch (e) {
+      debugPrint('Google Sign-In Error: $e');
       rethrow;
     }
   }
@@ -81,7 +86,7 @@ class AuthController extends _$AuthController {
   Future<void> signOut() async {
     await Supabase.instance.client.auth.signOut();
     try {
-      await GoogleSignIn.instance.signOut();
+      await gsis.GoogleSignIn.instance.signOut();
     } catch (_) {}
   }
 }
