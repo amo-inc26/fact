@@ -5,6 +5,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/glass_container.dart';
 import '../../core/music_sync/apple_music_token_provider.dart';
 import '../../core/music_sync/library_sync_service.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'profile_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -50,8 +51,8 @@ class ProfileScreen extends ConsumerWidget {
                               icon: Icons.music_note,
                               label: 'Apple Music と同期',
                               onTap: () async {
-                                // TODO: Get actual developer token from secure source
-                                const devToken = 'YOUR_DEVELOPER_TOKEN';
+                                // Get developer token from .env
+                                final devToken = dotenv.env['APPLE_MUSIC_DEVELOPER_TOKEN'] ?? '';
                                 try {
                                   await ref.read(appleMusicTokenProvider.notifier).requestToken(devToken);
                                   if (context.mounted) {

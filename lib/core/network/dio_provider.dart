@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'dio_provider.g.dart';
@@ -17,9 +18,10 @@ Dio dio(Ref ref) {
   dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) {
-        // TODO: Get actual token from secure storage or config
-        const developerToken = 'YOUR_DEVELOPER_TOKEN';
-        options.headers['Authorization'] = 'Bearer $developerToken';
+        final developerToken = dotenv.env['APPLE_MUSIC_DEVELOPER_TOKEN'] ?? '';
+        if (developerToken.isNotEmpty) {
+          options.headers['Authorization'] = 'Bearer $developerToken';
+        }
         return handler.next(options);
       },
     ),
