@@ -1,0 +1,21 @@
+        actions: [
+          if (userId == null) ...[
+            IconButton(
+              icon: const Icon(Icons.person_add_outlined, color: Colors.white),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const FollowRequestsScreen()),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.settings_outlined, color: Colors.white),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                );
+              },
+            ),
+          ]
