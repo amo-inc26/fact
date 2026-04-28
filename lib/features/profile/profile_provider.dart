@@ -19,23 +19,44 @@ class ProfileController extends _$ProfileController {
     final targetId = targetUserId ?? currentUser.id;
     final isMe = targetId == currentUser.id;
 
+    // プロフィール情報の取得
     final profileResponse = await supabase
         .from('profiles')
         .select()
         .eq('id', targetId)
-        .single();
+        .maybeSingle();
 
+    final profile = profileResponse ?? {
+      'id': targetId,
+      'username': 'User',
+      'avatar_url': null,
+      'bio': '',
+    };
+
+    // 「感性の門番」チェック：自分以外の場合、共鳴があるか確認
     bool hasResonance = isMe;
     if (!isMe) {
-      final resonanceCheck = await supabase
-          .from('liked_songs')
-          .select('id')
-          .eq('user_id', currentUser.id)
-          .limit(1);
+      // 1. 相手の全投稿曲（タイトルとアーティスト）を取得
+      final targetPosts = await supabase
+          .from('posts')
+          .select('track_name, artist_name')
+          .eq('user_id', targetId);
       
-      hasResonance = (resonanceCheck as List).isNotEmpty; 
+      if ((targetPosts as List).isNotEmpty) {
+        // 2. 自分がいいねした曲の中に、相手の投稿曲があるか確認
+        final trackNames = targetPosts.map((p) => p['track_name'] as String).toList();
+        final resonanceCheck = await supabase
+            .from('liked_songs')
+            .select('id')
+            .eq('user_id', currentUser.id)
+            .inFilter('title', trackNames)
+            .limit(1);
+        
+        hasResonance = (resonanceCheck as List).isNotEmpty;
+      }
     }
 
+    // 投稿一覧の取得（共鳴がある場合、または自分の場合のみ）
     List<PostModel> posts = [];
     if (hasResonance) {
       final postsResponse = await supabase
@@ -65,6 +86,7 @@ class ProfileController extends _$ProfileController {
       }).toList();
     }
 
+    // フォロー状態の取得
     bool isFollowing = false;
     if (!isMe) {
       final followCheck = await supabase
@@ -77,7 +99,7 @@ class ProfileController extends _$ProfileController {
     }
 
     return ProfileData(
-      profile: profileResponse,
+      profile: profile,
       posts: posts,
       isMe: isMe,
       hasResonance: hasResonance,
