@@ -7,6 +7,8 @@ import '../../core/widgets/adaptive_background.dart';
 import '../timeline/timeline_screen.dart';
 import '../profile/profile_screen.dart';
 import '../post/post_creation_screen.dart';
+import '../explore/explore_screen.dart';
+import '../dm/dm_screen.dart';
 
 class RootNavigationScreen extends ConsumerStatefulWidget {
   const RootNavigationScreen({super.key});
@@ -20,8 +22,10 @@ class _RootNavigationScreenState extends ConsumerState<RootNavigationScreen> {
 
   final List<Widget> _screens = [
     const TimelineScreen(),
-    const ProfileScreen(),
+    const ExploreScreen(),
     const PostCreationScreen(),
+    const DMScreen(),
+    const ProfileScreen(),
   ];
 
   @override
@@ -42,31 +46,39 @@ class _RootNavigationScreenState extends ConsumerState<RootNavigationScreen> {
             Align(
               alignment: Alignment.bottomCenter,
               child: Padding(
-                padding: const EdgeInsets.only(bottom: 30),
+                padding: const EdgeInsets.only(bottom: 30, left: 16, right: 16),
                 child: GlassContainer(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   borderRadius: 40,
                   blur: 30,
                   child: Row(
-                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       _NavItem(
-                        icon: Icons.music_note_rounded,
+                        icon: Icons.home_rounded,
                         isSelected: _selectedIndex == 0,
                         onTap: () => setState(() => _selectedIndex = 0),
                       ),
-                      const SizedBox(width: 24),
+                      _NavItem(
+                        icon: Icons.explore_rounded,
+                        isSelected: _selectedIndex == 1,
+                        onTap: () => setState(() => _selectedIndex = 1),
+                      ),
                       _NavItem(
                         icon: Icons.add_rounded,
                         isSelected: _selectedIndex == 2,
                         isCenter: true,
                         onTap: () => setState(() => _selectedIndex = 2),
                       ),
-                      const SizedBox(width: 24),
+                      _NavItem(
+                        icon: Icons.chat_bubble_rounded,
+                        isSelected: _selectedIndex == 3,
+                        onTap: () => setState(() => _selectedIndex = 3),
+                      ),
                       _NavItem(
                         icon: Icons.person_rounded,
                         isSelected: _selectedIndex == 1,
-                        onTap: () => setState(() => _selectedIndex = 1),
+                        onTap: () => setState(() => _selectedIndex = 4),
                       ),
                     ],
                   ),
@@ -97,19 +109,36 @@ class _NavItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: Container(
         padding: EdgeInsets.all(isCenter ? 14 : 12),
         decoration: BoxDecoration(
-          color: isSelected 
-              ? (isCenter ? AppColors.primary : AppColors.primary.withValues(alpha: 0.2)) 
+          color: isCenter && isSelected 
+              ? AppColors.primary 
               : Colors.transparent,
           shape: BoxShape.circle,
-          border: isCenter ? Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1) : null,
         ),
-        child: Icon(
-          icon,
-          color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.5),
-          size: isCenter ? 32 : 28,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: isSelected 
+                  ? (isCenter ? Colors.white : AppColors.primary) 
+                  : Colors.white.withValues(alpha: 0.5),
+              size: isCenter ? 32 : 26,
+            ),
+            if (isSelected && !isCenter)
+              Container(
+                margin: const EdgeInsets.only(top: 4),
+                width: 4,
+                height: 4,
+                decoration: const BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                ),
+              ),
+          ],
         ),
       ),
     );
