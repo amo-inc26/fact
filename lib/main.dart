@@ -5,6 +5,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/theme/app_colors.dart';
 import 'core/auth/auth_provider.dart';
 import 'features/auth/login_screen.dart';
+import 'features/onboarding/onboarding_provider.dart';
+import 'features/onboarding/onboarding_screen.dart';
 import 'features/timeline/timeline_screen.dart';
 
 Future<void> main() async {
@@ -28,6 +30,7 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(authControllerProvider);
+    final onboardingAsync = ref.watch(onboardingStatusProvider);
 
     return MaterialApp(
       title: 'fact',
@@ -43,7 +46,13 @@ class MyApp extends ConsumerWidget {
           ThemeData.dark().textTheme,
         ),
       ),
-      home: session == null ? const LoginScreen() : const TimelineScreen(),
+      home: session == null
+          ? const LoginScreen()
+          : onboardingAsync.when(
+              data: (completed) => completed ? const TimelineScreen() : const OnboardingScreen(),
+              loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+              error: (e, st) => Scaffold(body: Center(child: Text('Error: $e'))),
+            ),
     );
   }
 }
