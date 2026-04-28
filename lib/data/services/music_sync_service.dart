@@ -1,11 +1,15 @@
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:music_kit/music_kit.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 part 'music_sync_service.g.dart';
 
 @riverpod
 class MusicSyncService extends _$MusicSyncService {
+  final _musicKitPlugin = MusicKit();
+
   @override
   FutureOr<void> build() async {}
 
@@ -19,7 +23,6 @@ class MusicSyncService extends _$MusicSyncService {
     if (user == null) return;
 
     try {
-      // ユーザーの連携状態を確認
       final profile = await supabase
           .from('profiles')
           .select('apple_music_token, spotify_token')
@@ -40,29 +43,47 @@ class MusicSyncService extends _$MusicSyncService {
     }
   }
 
-  /// Apple Music への追加処理
-  /// 
-  /// 実行には Apple Developer Program の MusicKit 設定が必要です。
-  /// [token] は Apple Music の User Token を想定しています。
+  /// Apple Music への追加
   Future<void> _addToAppleMusic(String title, String artist, String token) async {
-    // TODO: MusicKit JS または REST API (v1/me/library/playlists) を使用して楽曲を追加
-    debugPrint('MusicSync: Syncing to Apple Music -> $title by $artist');
+    // TODO: Apple Music API を叩いてプレイリスト「Fact Likes」へ楽曲を追加
+    debugPrint('MusicSync: Syncing $title to Apple Music...');
   }
 
-  /// Spotify への追加処理
-  /// 
-  /// 実行には Spotify for Developers での Client ID 設定が必要です。
-  /// [token] は OAuth2 の Access Token を想定しています。
+  /// Spotify への追加
   Future<void> _addToSpotify(String title, String artist, String token) async {
-    // TODO: Spotify Web API (POST /v1/playlists/{playlist_id}/tracks) を使用して楽曲を追加
-    debugPrint('MusicSync: Syncing to Spotify -> $title by $artist');
+    // TODO: Spotify Web API を叩いてプレイリスト「Fact Likes」へ楽曲を追加
+    debugPrint('MusicSync: Syncing $title to Spotify...');
   }
   
-  /// 外部サービスとの連携開始フロー
-  /// 
-  /// 認証用の Web ブラウザを起動し、トークンを取得して profiles テーブルに保存します。
+  /// 連携開始
   Future<void> linkService(String service) async {
-    debugPrint('MusicSync: Starting link flow for $service');
-    // TODO: flutter_web_auth 等を使用した OAuth 認証フローの実装
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+
+    if (service == 'Apple Music') {
+      try {
+        final status = await _musicKitPlugin.requestAuthorizationStatus();
+        if (status is MusicAuthorizationStatusAuthorized) {
+          // デベロッパートークンを取得（.env または Apple から直接）
+          final devToken = dotenv.env['APPLE_MUSIC_DEVELOPER_TOKEN'];
+          if (devToken == null || devToken.isEmpty) {
+            debugPrint('Error: APPLE_MUSIC_DEVELOPER_TOKEN is missing in .env');
+            return;
+          }
+
+          final userToken = await _musicKitPlugin.requestUserToken(devToken);
+          await supabase.from('profiles').update({'apple_music_token': userToken}).eq('id', user.id);
+          debugPrint('Apple Music linked successfully');
+        } else {
+          debugPrint('Apple Music authorization denied: $status');
+        }
+      } catch (e) {
+        debugPrint('Apple Music link error: $e');
+      }
+    } else if (service == 'Spotify') {
+      // TODO: Spotify OAuth 連携
+      debugPrint('Spotify Link: Please configure CLIENT_ID to enable OAuth');
+    }
   }
 }
