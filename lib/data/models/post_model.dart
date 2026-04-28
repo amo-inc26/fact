@@ -14,6 +14,8 @@ sealed class PostModel with _$PostModel {
     String? previewUrl,
     String? comment,
     String? genre,
+    String? feeling,
+    String? scene,
     required DateTime createdAt,
     String? username,
     String? avatarUrl,

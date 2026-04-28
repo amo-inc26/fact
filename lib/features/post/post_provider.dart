@@ -8,20 +8,31 @@ part 'post_provider.g.dart';
 class PostController extends _$PostController {
   @override
   FutureOr<List<PostModel>> build() async {
-    final response = await Supabase.instance.client
+    return _fetchPosts();
+  }
+
+  Future<List<PostModel>> _fetchPosts({String? genre, String? feeling, String? scene}) async {
+    var query = Supabase.instance.client
         .from('posts')
         .select('''
           *,
           profiles:user_id (username, avatar_url)
-        ''')
-        .order('created_at', ascending: false)
-        .limit(50);
+        ''');
+
+    if (genre != null) {
+      query = query.eq('genre', genre);
+    } else if (feeling != null) {
+      query = query.eq('feeling', feeling);
+    } else if (scene != null) {
+      query = query.eq('scene', scene);
+    }
+
+    final response = await query.order('created_at', ascending: false).limit(50);
 
     final List<PostModel> posts = [];
     for (final item in (response as List)) {
       final profile = item['profiles'];
       
-      // Fetch resonance count (total likes for this track)
       final resonanceResponse = await Supabase.instance.client
           .from('liked_songs')
           .select('id')
@@ -39,6 +50,8 @@ class PostController extends _$PostController {
         previewUrl: item['preview_url'],
         comment: item['comment'],
         genre: item['genre'],
+        feeling: item['feeling'],
+        scene: item['scene'],
         createdAt: DateTime.parse(item['created_at']),
         username: profile != null ? profile['username'] : 'Unknown',
         avatarUrl: profile != null ? profile['avatar_url'] : null,
@@ -56,6 +69,8 @@ class PostController extends _$PostController {
     String? previewUrl,
     String? comment,
     String? genre,
+    String? feeling,
+    String? scene,
   }) async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
@@ -68,9 +83,16 @@ class PostController extends _$PostController {
       'preview_url': previewUrl,
       'comment': comment,
       'genre': genre,
+      'feeling': feeling,
+      'scene': scene,
       'track_id': '${trackName}_$artistName',
     });
     
     ref.invalidateSelf();
   }
+}
+
+@riverpod
+Future<List<PostModel>> filteredPosts(Ref ref, {String? genre, String? feeling, String? scene}) {
+  return ref.watch(postControllerProvider.notifier)._fetchPosts(genre: genre, feeling: feeling, scene: scene);
 }
