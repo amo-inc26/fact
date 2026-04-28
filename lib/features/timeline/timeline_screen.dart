@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../core/audio/audio_player_provider.dart';
 import '../../data/models/song_model.dart';
+import '../../core/theme/background_provider.dart';
 import '../post/post_provider.dart';
 import 'widgets/music_card.dart';
 import 'widgets/resonance_animation.dart';
@@ -31,6 +33,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
         final postsAsync = ref.watch(postControllerProvider);
 
         return Scaffold(
+          backgroundColor: Colors.transparent,
           body: Stack(
             children: [
               postsAsync.when(
@@ -55,6 +58,8 @@ class _TimelineScreenState extends State<TimelineScreen> {
                       
                       if (index == 0) {
                          ref.read(audioPlayerControllerProvider.notifier).playUrl(song.previewUrl);
+                         // Update background
+                         Future.microtask(() => ref.read(backgroundImageProvider.notifier).update(song.artworkUrl));
                       }
 
                       return MusicCard(
@@ -67,11 +72,16 @@ class _TimelineScreenState extends State<TimelineScreen> {
                     onSwipe: (previousIndex, currentIndex, direction) {
                       if (direction == CardSwiperDirection.right || direction == CardSwiperDirection.top) {
                         _triggerResonance();
+                        HapticFeedback.mediumImpact();
+                      } else {
+                        HapticFeedback.lightImpact();
                       }
 
                       if (currentIndex != null && currentIndex < posts.length) {
                         final nextPost = posts[currentIndex];
                         ref.read(audioPlayerControllerProvider.notifier).playUrl(nextPost.previewUrl ?? '');
+                        // Update background
+                        ref.read(backgroundImageProvider.notifier).update(nextPost.artworkUrl);
                       } else {
                         ref.read(audioPlayerControllerProvider.notifier).stop();
                       }

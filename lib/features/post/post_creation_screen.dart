@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme/app_colors.dart';
@@ -26,6 +27,7 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
     
     setState(() => _isSearching = true);
     final results = await ref.read(appleMusicServiceProvider.notifier).searchSongs(_searchController.text);
+    HapticFeedback.lightImpact();
     setState(() {
       _searchResults = results;
       _isSearching = false;
@@ -35,17 +37,9 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: Stack(
         children: [
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: AppColors.defaultGradient,
-              ),
-            ),
-          ),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(24.0),
@@ -109,7 +103,10 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
                                   ),
                                   title: Text(song.name),
                                   subtitle: Text(song.artistName),
-                                  onTap: () => setState(() => _selectedSong = song),
+                                  onTap: () {
+                                    HapticFeedback.selectionClick();
+                                    setState(() => _selectedSong = song);
+                                  },
                                 );
                               },
                             ),
@@ -182,6 +179,7 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
                                 comment: _commentController.text,
                                 genre: _selectedSong!.genres.isNotEmpty ? _selectedSong!.genres.first : null,
                               );
+                              HapticFeedback.heavyImpact();
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(content: Text('共鳴をシェアしました')),
