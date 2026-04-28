@@ -22,16 +22,35 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
   SongModel? _selectedSong;
   bool _isSearching = false;
 
+  String? _selectedFeeling;
+  String? _selectedScene;
+
+  final List<String> _feelings = ['まったり', 'テンション上げたい', 'センチメンタル', 'ハッピー', '癒やされたい', '集中したい'];
+  final List<String> _scenes = ['通勤・通学', '勉強・作業', 'ドライブ', 'デート', 'カフェタイム', 'ワークアウト'];
+
   void _onSearch(WidgetRef ref) async {
     if (_searchController.text.isEmpty) return;
     
     setState(() => _isSearching = true);
-    final results = await ref.read(appleMusicServiceProvider.notifier).searchSongs(_searchController.text);
-    HapticFeedback.lightImpact();
-    setState(() {
-      _searchResults = results;
-      _isSearching = false;
-    });
+    try {
+      final results = await ref.read(appleMusicServiceProvider.notifier).searchSongs(_searchController.text);
+      HapticFeedback.lightImpact();
+      if (mounted) {
+        setState(() {
+          _searchResults = results;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('検索エラー: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSearching = false);
+      }
+    }
   }
 
   @override
@@ -77,7 +96,10 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
                           ),
                           IconButton(
                             icon: const Icon(Icons.search),
-                            onPressed: () {},
+                            onPressed: () {
+                              final ref = ProviderScope.containerOf(context);
+                              _onSearch(ref);
+                            },
                           ),
                         ],
                       ),
@@ -143,7 +165,61 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
+                    
+                    // Feeling & Scene Selection
+                    const Text('Feeling', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 40,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _feelings.length,
+                        itemBuilder: (context, index) {
+                          final feeling = _feelings[index];
+                          final isSelected = _selectedFeeling == feeling;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: GestureDetector(
+                              onTap: () => setState(() => _selectedFeeling = isSelected ? null : feeling),
+                              child: GlassContainer(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                borderRadius: 20,
+                                color: isSelected ? AppColors.primary.withValues(alpha: 0.4) : null,
+                                child: Text(feeling, style: TextStyle(color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.6))),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('Scene', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 40,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _scenes.length,
+                        itemBuilder: (context, index) {
+                          final scene = _scenes[index];
+                          final isSelected = _selectedScene == scene;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: GestureDetector(
+                              onTap: () => setState(() => _selectedScene = isSelected ? null : scene),
+                              child: GlassContainer(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                borderRadius: 20,
+                                color: isSelected ? AppColors.primary.withValues(alpha: 0.4) : null,
+                                child: Text(scene, style: TextStyle(color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.6))),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 20),
                     
                     // Comment Field
                     const Text('Comment', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -153,7 +229,7 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
                       borderRadius: 16,
                       child: TextField(
                         controller: _commentController,
-                        maxLines: 4,
+                        maxLines: 2,
                         decoration: const InputDecoration(
                           border: InputBorder.none,
                           hintText: 'この曲の何に「共鳴」した？',
@@ -178,6 +254,8 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
                                 previewUrl: _selectedSong!.previewUrl,
                                 comment: _commentController.text,
                                 genre: _selectedSong!.genres.isNotEmpty ? _selectedSong!.genres.first : null,
+                                feeling: _selectedFeeling,
+                                scene: _selectedScene,
                               );
                               HapticFeedback.heavyImpact();
                               if (context.mounted) {
@@ -188,8 +266,9 @@ class _PostCreationScreenState extends State<PostCreationScreen> {
                                   _selectedSong = null;
                                   _commentController.clear();
                                   _searchController.clear();
+                                  _selectedFeeling = null;
+                                  _selectedScene = null;
                                 });
-                                // Navigate back to timeline or handled by RootNav
                               }
                             },
                             style: ElevatedButton.styleFrom(
