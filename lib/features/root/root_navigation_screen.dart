@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/glass_container.dart';
+import '../../core/theme/background_provider.dart';
+import '../../core/widgets/adaptive_background.dart';
 import '../timeline/timeline_screen.dart';
 import '../profile/profile_screen.dart';
 import '../post/post_creation_screen.dart';
 
-class RootNavigationScreen extends StatefulWidget {
+class RootNavigationScreen extends ConsumerStatefulWidget {
   const RootNavigationScreen({super.key});
 
   @override
-  State<RootNavigationScreen> createState() => _RootNavigationScreenState();
+  ConsumerState<RootNavigationScreen> createState() => _RootNavigationScreenState();
 }
 
-class _RootNavigationScreenState extends State<RootNavigationScreen> {
+class _RootNavigationScreenState extends ConsumerState<RootNavigationScreen> {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = [
@@ -23,50 +26,55 @@ class _RootNavigationScreenState extends State<RootNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final backgroundUrl = ref.watch(backgroundImageProvider);
+
     return Scaffold(
-      body: Stack(
-        children: [
-          IndexedStack(
-            index: _selectedIndex,
-            children: _screens,
-          ),
-          
-          // Floating Navigation Bar
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 30),
-              child: GlassContainer(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                borderRadius: 40,
-                blur: 30,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _NavItem(
-                      icon: Icons.music_note_rounded,
-                      isSelected: _selectedIndex == 0,
-                      onTap: () => setState(() => _selectedIndex = 0),
-                    ),
-                    const SizedBox(width: 24),
-                    _NavItem(
-                      icon: Icons.add_rounded,
-                      isSelected: _selectedIndex == 2,
-                      isCenter: true,
-                      onTap: () => setState(() => _selectedIndex = 2),
-                    ),
-                    const SizedBox(width: 24),
-                    _NavItem(
-                      icon: Icons.person_rounded,
-                      isSelected: _selectedIndex == 1,
-                      onTap: () => setState(() => _selectedIndex = 1),
-                    ),
-                  ],
+      body: AdaptiveBackground(
+        imageUrl: backgroundUrl,
+        child: Stack(
+          children: [
+            IndexedStack(
+              index: _selectedIndex,
+              children: _screens,
+            ),
+            
+            // Floating Navigation Bar
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 30),
+                child: GlassContainer(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  borderRadius: 40,
+                  blur: 30,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _NavItem(
+                        icon: Icons.music_note_rounded,
+                        isSelected: _selectedIndex == 0,
+                        onTap: () => setState(() => _selectedIndex = 0),
+                      ),
+                      const SizedBox(width: 24),
+                      _NavItem(
+                        icon: Icons.add_rounded,
+                        isSelected: _selectedIndex == 2,
+                        isCenter: true,
+                        onTap: () => setState(() => _selectedIndex = 2),
+                      ),
+                      const SizedBox(width: 24),
+                      _NavItem(
+                        icon: Icons.person_rounded,
+                        isSelected: _selectedIndex == 1,
+                        onTap: () => setState(() => _selectedIndex = 1),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
