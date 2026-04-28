@@ -4,7 +4,7 @@ part 'song_model.freezed.dart';
 part 'song_model.g.dart';
 
 @freezed
-class SongModel with _$SongModel {
+sealed class SongModel with _$SongModel {
   const factory SongModel({
     required String id,
     required String name,
