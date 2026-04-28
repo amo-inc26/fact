@@ -33,7 +33,8 @@ class TimelineController extends _$TimelineController {
       final query = supabase
           .from('posts')
           .select('*, profiles:user_id (username, avatar_url)')
-          .inFilter('user_id', followingIds);
+          .inFilter('user_id', followingIds)
+          .neq('user_id', user.id);
       
       final response = await query.order('created_at', ascending: false).limit(50);
       postsData = response as List;
@@ -41,6 +42,10 @@ class TimelineController extends _$TimelineController {
       var query = supabase
           .from('posts')
           .select('*, profiles:user_id (username, avatar_url)');
+      
+      if (user != null) {
+        query = query.neq('user_id', user.id);
+      }
       
       if (genre != null) {
         query = query.eq('genre', genre);
