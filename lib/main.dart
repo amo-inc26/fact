@@ -7,7 +7,7 @@ import 'core/auth/auth_provider.dart';
 import 'features/auth/login_screen.dart';
 import 'features/onboarding/onboarding_provider.dart';
 import 'features/onboarding/onboarding_screen.dart';
-import 'features/timeline/timeline_screen.dart';
+import 'features/root/root_navigation_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,7 +49,7 @@ class MyApp extends ConsumerWidget {
       home: session == null
           ? const LoginScreen()
           : onboardingAsync.when(
-              data: (completed) => completed ? const TimelineScreen() : const OnboardingScreen(),
+              data: (completed) => completed ? const RootNavigationScreen() : const OnboardingScreen(),
               loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
               error: (e, st) => Scaffold(body: Center(child: Text('Error: $e'))),
             ),
