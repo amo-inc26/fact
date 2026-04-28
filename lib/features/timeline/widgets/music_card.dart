@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/glass_container.dart';
 import '../../../data/models/song_model.dart';
 
@@ -7,38 +8,39 @@ class MusicCard extends StatelessWidget {
   const MusicCard({
     super.key,
     required this.song,
+    this.username,
+    this.comment,
   });
 
   final SongModel song;
+  final String? username;
+  final String? comment;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.5),
-            blurRadius: 20,
-            spreadRadius: 5,
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Artwork Background
-            CachedNetworkImage(
-              imageUrl: song.artworkUrl,
+    return GlassContainer(
+      borderRadius: 30,
+      blur: 20,
+      child: Stack(
+        children: [
+          // Artwork
+          ClipRRect(
+            borderRadius: BorderRadius.circular(30),
+            child: CachedNetworkImage(
+              imageUrl: song.artworkUrl.replaceAll('{w}x{h}', '800x800'),
+              height: double.infinity,
+              width: double.infinity,
               fit: BoxFit.cover,
-              placeholder: (context, url) => Container(color: Colors.grey[900]),
-              errorWidget: (context, url, error) => const Icon(Icons.error),
             ),
-            
-            // Gradient Overlay
-            Container(
+          ),
+          
+          // Info Overlay
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
@@ -49,72 +51,65 @@ class MusicCard extends StatelessWidget {
                   ],
                 ),
               ),
-            ),
-            
-            // Song Info
-            Positioned(
-              bottom: 40,
-              left: 20,
-              right: 20,
-              child: GlassContainer(
-                padding: const EdgeInsets.all(20),
-                blur: 15,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      song.name,
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (username != null) ...[
+                    Row(
+                      children: [
+                        const Icon(Icons.person, size: 16, color: AppColors.primary),
+                        const SizedBox(width: 4),
+                        Text(
+                          username!,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
                     ),
-                    Text(
-                      song.artistName,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.8),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    const SizedBox(height: 8),
+                  ],
+                  Text(
+                    song.name,
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      children: song.genres.map((genre) => _GenreTag(label: genre)).toList(),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    song.artistName,
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.white.withValues(alpha: 0.8),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (comment != null && comment!.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    GlassContainer(
+                      padding: const EdgeInsets.all(12),
+                      borderRadius: 12,
+                      child: Text(
+                        comment!,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
                     ),
                   ],
-                ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _GenreTag extends StatelessWidget {
-  const _GenreTag({required this.label});
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        ),
+          ),
+        ],
       ),
     );
   }
