@@ -24,12 +24,11 @@ class TimelineScreen extends ConsumerWidget {
               return MusicCard(song: songs[index]);
             },
             onSwipe: (previousIndex, currentIndex, direction) {
-              final song = songs[previousIndex];
               String swipeDirection = 'left';
               if (direction == CardSwiperDirection.right) swipeDirection = 'right';
               if (direction == CardSwiperDirection.top) swipeDirection = 'up';
               
-              ref.read(timelineControllerProvider.notifier).handleSwipe(song, swipeDirection);
+              ref.read(timelineControllerProvider.notifier).handleSwipe(previousIndex, swipeDirection);
               return true;
             },
           );
